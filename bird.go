@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"sync"
 
+	img "github.com/veandco/go-sdl2/img"
 	"github.com/veandco/go-sdl2/sdl"
-	img "github.com/veandco/go-sdl2/sdl_image"
 )
 
 const (
@@ -30,6 +30,7 @@ type bird struct {
 	mu sync.RWMutex
 
 	time     int
+	ar       int
 	textures []*sdl.Texture
 
 	x, y  int32
@@ -48,7 +49,14 @@ func newBird(r *sdl.Renderer) (*bird, error) {
 		}
 		textures = append(textures, texture)
 	}
-	return &bird{textures: textures, x: 10, y: 300, w: 50, h: 43}, nil
+	return &bird{textures: textures, x: 10, y: 300, w: 50, h: 43, ar: 10}, nil
+}
+
+func (b *bird) changeAnimationRate(tick int) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	b.ar = 100 / tick
 }
 
 func (b *bird) update() {
@@ -69,7 +77,7 @@ func (b *bird) paint(r *sdl.Renderer) error {
 
 	rect := &sdl.Rect{X: 10, Y: 600 - b.y - b.h/2, W: b.w, H: b.h}
 
-	i := b.time / 10 % len(b.textures)
+	i := b.time / b.ar % len(b.textures)
 	if err := r.Copy(b.textures[i], nil, rect); err != nil {
 		return fmt.Errorf("could not copy background: %v", err)
 	}

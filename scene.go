@@ -18,8 +18,8 @@ import (
 	"log"
 	"time"
 
+	img "github.com/veandco/go-sdl2/img"
 	"github.com/veandco/go-sdl2/sdl"
-	img "github.com/veandco/go-sdl2/sdl_image"
 )
 
 type scene struct {
@@ -52,24 +52,38 @@ func (s *scene) run(events <-chan sdl.Event, r *sdl.Renderer) <-chan error {
 
 	go func() {
 		defer close(errc)
-		tick := time.Tick(10 * time.Millisecond)
+		n := 0
+		tick := time.NewTicker(15 * time.Millisecond)
+		s.bird.changeAnimationRate(15)
 		for {
 			select {
 			case e := <-events:
 				if done := s.handleEvent(e); done {
 					return
 				}
-			case <-tick:
+			case <-tick.C:
+				n++
 				s.update()
 
 				if s.bird.isDead() {
 					drawTitle(r, "Game Over")
 					time.Sleep(time.Second)
 					s.restart()
+					n = 0
 				}
 
 				if err := s.paint(r); err != nil {
 					errc <- err
+				}
+
+				if n%1000 == 0 {
+					rate := 15 - n/1000
+					if rate >= 6 {
+						tick.Stop()
+						tick = time.NewTicker(time.Duration(rate) * time.Millisecond)
+						s.bird.changeAnimationRate(rate)
+						fmt.Println("Updated ticker, new rate =", rate)
+					}
 				}
 			}
 		}
